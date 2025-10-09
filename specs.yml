@@ -1,0 +1,135 @@
+# TinyGoDBLoader Specs
+# Purpose: CLI tool to populate a database with mock data for load testing.
+# Entities: Products, Categories, Subcategories, Tags
+# Version: 1.1
+
+app:
+  name: TinyGoDBLoader
+  type: CLI
+  language: Go
+  description: |
+    A lightweight Go CLI program to populate a database with mock data
+    for products, categories, subcategories, and tags, maintaining
+    distribution percentages and relationships for load testing.
+    Supports two decoupled modes:
+      1. metadata import (categories, subcategories, tags)
+      2. product import (append products multiple times)
+    Includes a CLI progress bar for large inserts.
+
+cli_args:
+  mode:
+    description: Operation mode: either "metadata" or "products"
+    type: string
+    required: true
+    example: "metadata"
+  db_url: string
+      description: Database connection URL
+  username: string
+      description: Database username
+  password: string
+      description: Database password
+  schema_name: string
+      description: Target schema to populate
+  product_count: integer
+      description: Number of products to insert (required only in "products" mode)
+
+entities:
+  categories:
+    description: Hardcoded list of product categories
+    data_source: ./categories.csv
+    fields:
+      - id: integer
+      - slug: string
+      - percentage: float # target distribution
+    hardcoded_example:
+      - id: 1
+        slug: "electronics"
+        percentage: 0.25
+      - id: 2
+        slug: "books"
+        percentage: 0.20
+
+  subcategories:
+    description: Hardcoded list of subcategories, associated with categories
+    data_source: ./sub_categories.csv
+    fields:
+      - id: integer
+      - slug: string
+      - parent_category_id: integer
+      - percentage: float
+    hardcoded_example:
+      - id: 1
+        slug: "smartphones"
+        parent_category_id: 1
+        percentage: 0.4
+      - id: 2
+        slug: "laptops"
+        parent_category_id: 1
+        percentage: 0.6
+
+  tags:
+    description: Tags randomly assigned to products
+    fields:
+      - id: integer
+      - name: string
+    config:
+      total_tags: 12000000
+      avg_tags_per_product: 25
+      avg_products_per_tag: 35
+
+  products:
+    description: Products linked to one category, multiple subcategories, multiple tags
+    fields:
+      - id: integer (auto-generated)
+      - name: string (mock generated)
+      - category_id: integer
+      - subcategory_ids: array of integers
+      - tag_ids: array of integers
+
+logic:
+  assumptions: the schema already exists and is empty
+  schema: ./schema.sql
+  modes:
+    metadata:
+      description: |
+        Inserts categories, subcategories, and tags.
+        Idempotent: does not duplicate existing records.
+    products:
+      description: |
+        Inserts products only.
+        Can run multiple times; always appends new products.
+        Respects hardcoded distributions of categories/subcategories/tags.
+        Supports CLI progress bar to monitor insert progress.
+  distribution_rules:
+    categories: Assign products according to 'percentage' for rough distribution
+    subcategories: Assign multiple per product, respecting percentage per parent category
+    tags: Assign random tags to products, respecting avg tags per product and avg products per tag
+
+ui:
+  progress:
+    description: |
+      Show progress for long-running inserts.
+      Applies to metadata import (optional if many entities) and product import (mandatory for large product_count).
+    style: CLI progress bar
+    library_options:
+      - pb/v3
+      - schollz/progressbar
+    behavior:
+      - Display: current insert count / total
+      - Update in batches (e.g., every 100 inserts)
+      - Complete: show summary (total inserted, distribution per category/subcategory/tag)
+
+implementation_notes:
+  - Use Go CLI framework (Cobra or flag) with "mode" argument
+  - Use database driver or lightweight ORM
+  - Random product name generator
+  - Batch inserts for performance
+  - Logging: show summary after each run
+  - Metadata import: idempotent
+  - Product import: append-only, supports multiple runs
+
+future_extensions:
+  - Configurable metadata via JSON/YAML input instead of hardcoded lists
+  - More sophisticated distribution algorithms
+  - Additional product fields and mock data types
+
