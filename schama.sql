@@ -267,9 +267,11 @@ FROM product p
 WHERE NOT (EXISTS (SELECT 1
                    FROM product_promo pp
                    WHERE pp.product_id = p.product_id))
-;
+ORDER BY download_count DESC;
 CREATE INDEX mv_product_downloads_last_7d_cat_dl_idx ON public.mv_product_downloads_last_7d USING btree (category_id, download_count DESC);
-
+CREATE INDEX mv_product_downloads_last_7d_download_count_idx ON public.mv_product_downloads_last_7d USING btree (download_count DESC);
+CREATE INDEX mv_product_downloads_last_7d_product_id_download_count_desc_idx ON public.mv_product_downloads_last_7d USING btree (product_id, download_count DESC);
+CREATE UNIQUE INDEX mv_product_downloads_last_7d_product_id_idx ON public.mv_product_downloads_last_7d USING btree (product_id);
 
 -- public.mv_category_counts source
 
