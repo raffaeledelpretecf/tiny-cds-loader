@@ -121,6 +121,52 @@ var subcategories = []Subcategory{
 	{ID: 14, Slug: "Serif", ParentCategoryID: 23, Percentage: 0.0007710},
 	{ID: 27, Slug: "Christmas", ParentCategoryID: 26, Percentage: 0.0006991},
 	{ID: 583, Slug: "Brushes", ParentCategoryID: 553, Percentage: 0.0006624},
+	{ID: 2370, Slug: "Halloween", ParentCategoryID: 553, Percentage: 0.0006500},
+	{ID: 2371, Slug: "Easter", ParentCategoryID: 553, Percentage: 0.0006200},
+	{ID: 2372, Slug: "Valentines Day", ParentCategoryID: 553, Percentage: 0.0005800},
+	{ID: 2373, Slug: "Thanksgiving", ParentCategoryID: 553, Percentage: 0.0005500},
+	{ID: 2374, Slug: "Birthday", ParentCategoryID: 553, Percentage: 0.0005200},
+	{ID: 2375, Slug: "Wedding", ParentCategoryID: 553, Percentage: 0.0004900},
+	{ID: 2376, Slug: "Baby Shower", ParentCategoryID: 553, Percentage: 0.0004600},
+	{ID: 2377, Slug: "Graduation", ParentCategoryID: 553, Percentage: 0.0004300},
+	{ID: 2378, Slug: "Summer", ParentCategoryID: 553, Percentage: 0.0004000},
+	{ID: 2379, Slug: "Spring", ParentCategoryID: 553, Percentage: 0.0003800},
+	{ID: 2380, Slug: "Fall", ParentCategoryID: 553, Percentage: 0.0003600},
+	{ID: 2381, Slug: "Back to School", ParentCategoryID: 553, Percentage: 0.0003400},
+	{ID: 2382, Slug: "Sports", ParentCategoryID: 553, Percentage: 0.0003200},
+	{ID: 2383, Slug: "Music", ParentCategoryID: 553, Percentage: 0.0003000},
+	{ID: 2384, Slug: "Food & Drink", ParentCategoryID: 553, Percentage: 0.0002800},
+	{ID: 2385, Slug: "Animals", ParentCategoryID: 553, Percentage: 0.0002600},
+	{ID: 2386, Slug: "Nature", ParentCategoryID: 553, Percentage: 0.0002400},
+	{ID: 2387, Slug: "Travel", ParentCategoryID: 553, Percentage: 0.0002200},
+	{ID: 2388, Slug: "Business", ParentCategoryID: 553, Percentage: 0.0002000},
+	{ID: 2389, Slug: "Education", ParentCategoryID: 553, Percentage: 0.0001800},
+	{ID: 2390, Slug: "Technology", ParentCategoryID: 553, Percentage: 0.0001600},
+	{ID: 637, Slug: "Paper Crafts", ParentCategoryID: 26, Percentage: 0.0001500},
+	{ID: 639, Slug: "Sewing & Quilting", ParentCategoryID: 26, Percentage: 0.0001400},
+	{ID: 640, Slug: "Jewelry Making", ParentCategoryID: 26, Percentage: 0.0001300},
+	{ID: 641, Slug: "Scrapbooking", ParentCategoryID: 26, Percentage: 0.0001200},
+	{ID: 642, Slug: "Card Making", ParentCategoryID: 26, Percentage: 0.0001100},
+	{ID: 2391, Slug: "Stickers & Labels", ParentCategoryID: 553, Percentage: 0.0001000},
+	{ID: 2392, Slug: "Banners & Signs", ParentCategoryID: 553, Percentage: 0.0000950},
+	{ID: 2393, Slug: "Invitations", ParentCategoryID: 553, Percentage: 0.0000900},
+	{ID: 2394, Slug: "Greeting Cards", ParentCategoryID: 553, Percentage: 0.0000850},
+	{ID: 2395, Slug: "Planners & Journals", ParentCategoryID: 553, Percentage: 0.0000800},
+	{ID: 2396, Slug: "Calendars", ParentCategoryID: 553, Percentage: 0.0000750},
+	{ID: 2397, Slug: "Bookmarks", ParentCategoryID: 553, Percentage: 0.0000700},
+	{ID: 2398, Slug: "Gift Tags", ParentCategoryID: 553, Percentage: 0.0000650},
+	{ID: 2399, Slug: "Photo Frames", ParentCategoryID: 553, Percentage: 0.0000600},
+	{ID: 2400, Slug: "Packaging", ParentCategoryID: 553, Percentage: 0.0000550},
+	{ID: 2401, Slug: "Wrapping Paper", ParentCategoryID: 553, Percentage: 0.0000500},
+	{ID: 11, Slug: "Handwriting", ParentCategoryID: 23, Percentage: 0.0000450},
+	{ID: 15, Slug: "Slab Serif", ParentCategoryID: 23, Percentage: 0.0000400},
+	{ID: 16, Slug: "Decorative", ParentCategoryID: 23, Percentage: 0.0000350},
+	{ID: 737, Slug: "Machine Embroidery", ParentCategoryID: 735, Percentage: 0.0000300},
+	{ID: 738, Slug: "Hand Embroidery", ParentCategoryID: 735, Percentage: 0.0000250},
+	{ID: 2247, Slug: "Files", ParentCategoryID: 2245, Percentage: 0.0000200},
+	{ID: 2248, Slug: "Templates", ParentCategoryID: 2245, Percentage: 0.0000150},
+	{ID: 2249, Slug: "3D Models", ParentCategoryID: 2244, Percentage: 0.0000100},
+	{ID: 2250, Slug: "Knitting Patterns", ParentCategoryID: 2246, Percentage: 0.0000050},
 }
 
 func main() {
@@ -157,9 +203,9 @@ func main() {
 		log.Fatal("Error: mode must be one of: categories, subcategories, tags, products, promos, downloads")
 	}
 
-	// Validate count for products, promos, and downloads modes
-	if (*mode == "products" || *mode == "promos" || *mode == "downloads") && *count <= 0 {
-		log.Fatal("Error: -count flag is required and must be > 0 for 'products', 'promos', and 'downloads' modes")
+	// Validate count for modes that require it
+	if (*mode == "subcategories" || *mode == "products" || *mode == "promos" || *mode == "downloads") && *count <= 0 {
+		log.Fatal("Error: -count flag is required and must be > 0 for 'subcategories', 'products', 'promos', and 'downloads' modes")
 	}
 
 	// Build connection string
@@ -197,7 +243,7 @@ func main() {
 		}
 		fmt.Println("\n✓ Categories import completed successfully!")
 	case "subcategories":
-		if err := importSubcategories(db); err != nil {
+		if err := importSubcategories(db, *count); err != nil {
 			log.Fatalf("Failed to import subcategories: %v", err)
 		}
 		fmt.Println("\n✓ Subcategories import completed successfully!")
@@ -281,11 +327,42 @@ func importCategories(db *sql.DB) error {
 	return nil
 }
 
-func importSubcategories(db *sql.DB) error {
+func importSubcategories(db *sql.DB, subcategoryCount int) error {
 	fmt.Println("\n=== Importing Subcategories ===\n")
-	fmt.Printf("Importing %d subcategories...\n", len(subcategories))
+	fmt.Printf("Importing %d subcategories...\n", subcategoryCount)
 
-	bar := progressbar.NewOptions(len(subcategories),
+	// Get all categories to randomly assign as parents
+	rows, err := db.Query("SELECT category_id FROM category WHERE parent_category_id IS NULL")
+	if err != nil {
+		return fmt.Errorf("failed to fetch categories: %w", err)
+	}
+	defer rows.Close()
+
+	var parentCategories []int64
+	for rows.Next() {
+		var catID int64
+		if err := rows.Scan(&catID); err != nil {
+			return fmt.Errorf("failed to scan category: %w", err)
+		}
+		parentCategories = append(parentCategories, catID)
+	}
+	rows.Close()
+
+	if len(parentCategories) == 0 {
+		return fmt.Errorf("no parent categories found - please import categories first")
+	}
+
+	fmt.Printf("Found %d parent categories\n", len(parentCategories))
+
+	// Get starting subcategory ID
+	var startID int64
+	err = db.QueryRow("SELECT COALESCE(MAX(category_id), 10000) FROM category WHERE parent_category_id IS NOT NULL").Scan(&startID)
+	if err != nil {
+		return fmt.Errorf("failed to get starting subcategory ID: %w", err)
+	}
+	startID++ // Start from next available ID
+
+	bar := progressbar.NewOptions(subcategoryCount,
 		progressbar.OptionSetDescription("Subcategories"),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionShowCount(),
@@ -299,42 +376,42 @@ func importSubcategories(db *sql.DB) error {
 	)
 
 	inserted := 0
-	skipped := 0
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	for _, subcat := range subcategories {
-		// Check if subcategory already exists
-		var exists bool
-		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM category WHERE category_id = $1)", subcat.ID).Scan(&exists)
+	// Generate subcategory names
+	subcategoryPrefixes := []string{"Modern", "Vintage", "Classic", "Premium", "Professional", "Creative", "Elegant", "Bold", "Minimal", "Decorative"}
+	subcategorySuffixes := []string{"Designs", "Templates", "Graphics", "Elements", "Patterns", "Styles", "Collections", "Sets", "Packs", "Kits"}
+
+	for i := 0; i < subcategoryCount; i++ {
+		subcatID := startID + int64(i)
+		parentCatID := parentCategories[rng.Intn(len(parentCategories))]
+		
+		// Generate random subcategory name
+		prefix := subcategoryPrefixes[rng.Intn(len(subcategoryPrefixes))]
+		suffix := subcategorySuffixes[rng.Intn(len(subcategorySuffixes))]
+		slug := fmt.Sprintf("%s-%s-%d", strings.ToLower(prefix), strings.ToLower(suffix), subcatID)
+
+		_, err = db.Exec(`
+			INSERT INTO category (
+				category_id, 
+				parent_category_id, 
+				default_name, 
+				default_description, 
+				url_path,
+				created_at,
+				updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			ON CONFLICT (category_id) DO NOTHING
+		`, subcatID, parentCatID, slug, fmt.Sprintf("Description for %s", slug), slug, time.Now(), time.Now())
+
 		if err != nil {
-			return fmt.Errorf("failed to check subcategory existence: %w", err)
+			return fmt.Errorf("failed to insert subcategory %d: %w", subcatID, err)
 		}
-
-		if !exists {
-			// Insert subcategory
-			_, err = db.Exec(`
-				INSERT INTO category (
-					category_id, 
-					parent_category_id, 
-					default_name, 
-					default_description, 
-					url_path,
-					created_at,
-					updated_at
-				) VALUES ($1, $2, $3, $4, $5, $6, $7)
-			`, subcat.ID, subcat.ParentCategoryID, subcat.Slug, fmt.Sprintf("Description for %s", subcat.Slug), subcat.Slug, time.Now(), time.Now())
-
-			if err != nil {
-				return fmt.Errorf("failed to insert subcategory %d: %w", subcat.ID, err)
-			}
-			inserted++
-		} else {
-			skipped++
-		}
-
+		inserted++
 		bar.Add(1)
 	}
 
-	fmt.Printf("\n  ✓ Inserted: %d, Skipped: %d\n\n", inserted, skipped)
+	fmt.Printf("\n  ✓ Inserted: %d subcategories\n\n", inserted)
 	return nil
 }
 
@@ -481,9 +558,34 @@ func importProducts(db *sql.DB, productCount int) error {
 	}
 	startID++ // Start from next available ID
 
+	// Load subcategories from database
+	fmt.Println("Loading subcategories from database...")
+	rows, err := db.Query("SELECT category_id, parent_category_id FROM category WHERE parent_category_id IS NOT NULL")
+	if err != nil {
+		return fmt.Errorf("failed to load subcategories: %w", err)
+	}
+	defer rows.Close()
+
+	subcategoryList := make(map[int64][]int64) // parent_category_id -> []subcategory_ids
+	var totalSubcategories int
+	for rows.Next() {
+		var subcatID, parentCatID int64
+		if err := rows.Scan(&subcatID, &parentCatID); err != nil {
+			return fmt.Errorf("failed to scan subcategory: %w", err)
+		}
+		subcategoryList[parentCatID] = append(subcategoryList[parentCatID], subcatID)
+		totalSubcategories++
+	}
+	rows.Close()
+
+	if totalSubcategories == 0 {
+		return fmt.Errorf("no subcategories found - please import subcategories first")
+	}
+
+	fmt.Printf("Loaded %d subcategories\n", totalSubcategories)
+
 	// Build weighted category distribution
 	categoryWeights := buildCategoryWeights()
-	subcategoryWeights := buildSubcategoryWeights()
 
 	bar := progressbar.NewOptions(productCount,
 		progressbar.OptionSetDescription("Products"),
@@ -536,7 +638,7 @@ func importProducts(db *sql.DB, productCount int) error {
 			rng := rand.New(rand.NewSource(time.Now().UnixNano() + int64(workerID)*1000))
 
 			for batch := range jobs {
-				if err := insertProductBatch(db, batch.startID, batch.count, categoryWeights, subcategoryWeights, rng); err != nil {
+				if err := insertProductBatch(db, batch.startID, batch.count, categoryWeights, subcategoryList, rng); err != nil {
 					errors <- fmt.Errorf("worker %d: %w", workerID, err)
 					continue
 				}
@@ -593,28 +695,6 @@ func buildCategoryWeights() []float64 {
 	return weights
 }
 
-func buildSubcategoryWeights() map[int64][]float64 {
-	weights := make(map[int64][]float64)
-
-	for _, cat := range categories {
-		var subWeights []float64
-		sum := 0.0
-
-		for _, subcat := range subcategories {
-			if subcat.ParentCategoryID == cat.ID {
-				sum += subcat.Percentage
-				subWeights = append(subWeights, sum)
-			}
-		}
-
-		if len(subWeights) > 0 {
-			weights[cat.ID] = subWeights
-		}
-	}
-
-	return weights
-}
-
 func selectCategoryByWeight(rng *rand.Rand, weights []float64) int64 {
 	r := rng.Float64()
 	for i, w := range weights {
@@ -625,39 +705,26 @@ func selectCategoryByWeight(rng *rand.Rand, weights []float64) int64 {
 	return categories[len(categories)-1].ID
 }
 
-func selectSubcategoriesByWeight(rng *rand.Rand, categoryID int64, weights map[int64][]float64) []int64 {
-	subWeights, exists := weights[categoryID]
-	if !exists || len(subWeights) == 0 {
+func selectSubcategories(rng *rand.Rand, categoryID int64, subcategoryList map[int64][]int64) []int64 {
+	subcats, exists := subcategoryList[categoryID]
+	if !exists || len(subcats) == 0 {
 		return []int64{}
 	}
 
-	// Select 1-3 subcategories for this category
+	// Select 1-3 random subcategories for this category
 	numSubs := rng.Intn(3) + 1
-	selected := make(map[int64]bool)
-	result := []int64{}
-
-	for i := 0; i < numSubs && len(result) < len(subWeights); i++ {
-		r := rng.Float64()
-		for j, w := range subWeights {
-			if r <= w {
-				// Find the actual subcategory at this index for this category
-				idx := 0
-				for _, subcat := range subcategories {
-					if subcat.ParentCategoryID == categoryID {
-						if idx == j && !selected[subcat.ID] {
-							selected[subcat.ID] = true
-							result = append(result, subcat.ID)
-							break
-						}
-						idx++
-					}
-				}
-				break
-			}
-		}
+	if numSubs > len(subcats) {
+		numSubs = len(subcats)
 	}
 
-	return result
+	// Shuffle and pick first numSubs
+	shuffled := make([]int64, len(subcats))
+	copy(shuffled, subcats)
+	rng.Shuffle(len(shuffled), func(i, j int) {
+		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
+	})
+
+	return shuffled[:numSubs]
 }
 
 func selectRandomTags(rng *rand.Rand) []int64 {
@@ -674,7 +741,7 @@ func selectRandomTags(rng *rand.Rand) []int64 {
 	return tags
 }
 
-func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []float64, subcategoryWeights map[int64][]float64, rng *rand.Rand) error {
+func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []float64, subcategoryList map[int64][]int64, rng *rand.Rand) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -699,7 +766,7 @@ func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []
 	for i := 0; i < count; i++ {
 		productID := startID + int64(i)
 		categoryID := selectCategoryByWeight(rng, categoryWeights)
-		subcategoryIDs := selectSubcategoriesByWeight(rng, categoryID, subcategoryWeights)
+		subcategoryIDs := selectSubcategories(rng, categoryID, subcategoryList)
 		tagIDs := selectRandomTags(rng)
 
 		relations = append(relations, productRelation{
@@ -1022,6 +1089,200 @@ func insertPromoBatch(db *sql.DB, startPromoID int64, count int, totalProducts i
 	_, err = tx.Exec(promoQuery.String(), promoArgs...)
 	if err != nil {
 		return fmt.Errorf("failed to insert promos: %w", err)
+	}
+
+	return tx.Commit()
+}
+
+func importDownloads(db *sql.DB, downloadCount int) error {
+	fmt.Println("\n=== Importing Product Downloads ===\n")
+	fmt.Printf("Importing %d downloads using %d workers...\n", downloadCount, numWorkers)
+
+	// Get total product count
+	var totalProducts int64
+	err := db.QueryRow("SELECT COUNT(*) FROM product").Scan(&totalProducts)
+	if err != nil {
+		return fmt.Errorf("failed to count products: %w", err)
+	}
+
+	if totalProducts == 0 {
+		return fmt.Errorf("no products found in database - please import products first")
+	}
+
+	fmt.Printf("Found %d products in database\n", totalProducts)
+
+	// Pre-generate timestamps with hour precision for last 2 weeks
+	fmt.Println("Pre-generating timestamps...")
+	timestamps := generateHourlyTimestamps(14) // 14 days = 2 weeks
+	fmt.Printf("Generated %d unique hourly timestamps\n", len(timestamps))
+
+	// Get the starting download ID
+	var startDownloadID int64
+	err = db.QueryRow("SELECT COALESCE(MAX(download_id), 0) FROM product_download").Scan(&startDownloadID)
+	if err != nil {
+		return fmt.Errorf("failed to get starting download ID: %w", err)
+	}
+	startDownloadID++ // Start from next available ID
+
+	bar := progressbar.NewOptions(downloadCount,
+		progressbar.OptionSetDescription("Downloads"),
+		progressbar.OptionSetWidth(40),
+		progressbar.OptionShowCount(),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "=",
+			SaucerHead:    ">",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
+
+	// Create work channel
+	type downloadBatch struct {
+		startDownloadID int64
+		count           int
+	}
+
+	jobs := make(chan downloadBatch, 100)
+	errors := make(chan error, 1000)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	totalInserted := 0
+	var firstError error
+
+	// Error collector goroutine
+	var errorWg sync.WaitGroup
+	errorWg.Add(1)
+	go func() {
+		defer errorWg.Done()
+		for err := range errors {
+			if err != nil && firstError == nil {
+				mu.Lock()
+				if firstError == nil {
+					firstError = err
+				}
+				mu.Unlock()
+			}
+		}
+	}()
+
+	// Start worker goroutines
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+
+			rng := rand.New(rand.NewSource(time.Now().UnixNano() + int64(workerID)*1000))
+
+			for batch := range jobs {
+				if err := insertDownloadBatch(db, batch.startDownloadID, batch.count, totalProducts, timestamps, rng); err != nil {
+					errors <- fmt.Errorf("worker %d: %w", workerID, err)
+					continue
+				}
+
+				mu.Lock()
+				totalInserted += batch.count
+				bar.Add(batch.count)
+				mu.Unlock()
+			}
+		}(w)
+	}
+
+	// Send jobs to workers
+	go func() {
+		currentDownloadID := startDownloadID
+		remaining := downloadCount
+		batchSize := 5000 // 5000 downloads per batch
+
+		for remaining > 0 {
+			count := batchSize
+			if remaining < batchSize {
+				count = remaining
+			}
+
+			jobs <- downloadBatch{startDownloadID: currentDownloadID, count: count}
+			currentDownloadID += int64(count)
+			remaining -= count
+		}
+		close(jobs)
+	}()
+
+	// Wait for all workers to finish
+	wg.Wait()
+	close(errors)
+
+	// Wait for error collector to finish
+	errorWg.Wait()
+
+	// Check if there was an error
+	if firstError != nil {
+		return firstError
+	}
+
+	fmt.Printf("\n  ✓ Inserted: %d downloads\n\n", totalInserted)
+	return nil
+}
+
+func generateHourlyTimestamps(days int) []time.Time {
+	timestamps := make([]time.Time, 0, days*24)
+	now := time.Now()
+
+	// Truncate to hour precision
+	currentHour := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location())
+
+	// Generate timestamps for the last N days, one per hour
+	for i := 0; i < days*24; i++ {
+		timestamp := currentHour.Add(-time.Duration(i) * time.Hour)
+		timestamps = append(timestamps, timestamp)
+	}
+
+	return timestamps
+}
+
+func insertDownloadBatch(db *sql.DB, startDownloadID int64, count int, totalProducts int64, timestamps []time.Time, rng *rand.Rand) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Build batch insert for downloads
+	var downloadQuery strings.Builder
+	downloadQuery.WriteString("INSERT INTO product_download (download_id, product_id, downloaded_at, downloaded_at_day_normalized) VALUES ")
+
+	downloadArgs := make([]interface{}, 0, count*4)
+
+	for i := 0; i < count; i++ {
+		if i > 0 {
+			downloadQuery.WriteString(", ")
+		}
+
+		downloadID := startDownloadID + int64(i)
+
+		// Random product ID (1 to totalProducts)
+		productID := rng.Int63n(totalProducts) + 1
+
+		// Pick random timestamp from pre-generated list
+		downloadedAt := timestamps[rng.Intn(len(timestamps))]
+
+		// Calculate day normalized (Unix timestamp / 86400)
+		dayNormalized := downloadedAt.Unix() / 86400
+
+		argPos := i*4 + 1
+		downloadQuery.WriteString(fmt.Sprintf("($%d, $%d, $%d, $%d)",
+			argPos, argPos+1, argPos+2, argPos+3))
+
+		downloadArgs = append(downloadArgs,
+			downloadID,
+			productID,
+			downloadedAt,
+			dayNormalized,
+		)
+	}
+
+	_, err = tx.Exec(downloadQuery.String(), downloadArgs...)
+	if err != nil {
+		return fmt.Errorf("failed to insert downloads: %w", err)
 	}
 
 	return tx.Commit()
