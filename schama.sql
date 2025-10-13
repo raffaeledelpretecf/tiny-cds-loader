@@ -1,8 +1,10 @@
 create schema if not exists partman;
 create schema if not exists public;
 
-CREATE EXTENSION IF NOT EXISTS ltree;
-CREATE EXTENSION IF NOT EXISTS pg_partman SCHEMA partman;
+CREATE
+EXTENSION IF NOT EXISTS ltree;
+CREATE
+EXTENSION IF NOT EXISTS pg_partman SCHEMA partman;
 
 -- public.product_tag definition
 
@@ -266,3 +268,19 @@ CREATE INDEX if not exists product_tag_tag_id_idx ON public.product_tag USING bt
 CREATE index if not exists product_download_downloaded_at_day_normalized_idx ON public.product_download USING btree (downloaded_at_day_normalized);
 CREATE index if not exists product_download_downloaded_at_idx ON public.product_download USING brin (downloaded_at);
 CREATE index if not exists product_download_product_idt_idx ON public.product_download USING btree (product_id);
+
+CREATE
+MATERIALIZED VIEW mv_product_downloads_last_7d AS
+SELECT p.category_id, p.product_id, COALESCE(rd.download_count, 0::bigint) AS download_count
+FROM product p
+         LEFT JOIN (SELECT pd.product_id,
+                           count(*) AS download_count
+                    FROM product_download pd
+                    WHERE pd.downloaded_at_day_normalized >=
+                          (floor(EXTRACT(epoch FROM now()) / 86400::numeric)::bigint - 7)
+                    GROUP BY pd.product_id) rd ON p.product_id = rd.product_id
+WHERE NOT (EXISTS (SELECT 1
+                   FROM product_promo pp
+                   WHERE pp.product_id = p.product_id));
+CREATE INDEX mv_product_downloads_last_7d_cat_dl_idx ON public.mv_product_downloads_last_7d USING btree (category_id, download_count DESC);
+
