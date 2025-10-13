@@ -16,6 +16,7 @@ CREATE TABLE product_tag
 (
     product_id int8 NOT NULL,
     tag_id     int8 NOT NULL,
+    product_created_at timestamptz NULL,
     CONSTRAINT product_tag_pk PRIMARY KEY (product_id, tag_id)
 ) PARTITION BY HASH (tag_id);
 
@@ -261,9 +262,11 @@ CREATE INDEX if not exists product_prodct_id_status_idx ON public.product USING 
 -- Product category
 CREATE INDEX if not exists product_product_category_category_id_idx ON public.product_product_category USING btree (category_id);
 CREATE INDEX if not exists product_product_category_product_id_idx ON public.product_product_category USING btree (product_id);
+CREATE INDEX if not exists product_product_category_category_id_product_id_idx ON public.product_product_category USING btree (category_id, product_id);
 -- Product tag
 CREATE INDEX if not exists product_tag_product_id_idx ON public.product_tag USING btree (product_id);
 CREATE INDEX if not exists product_tag_tag_id_idx ON public.product_tag USING btree (tag_id);
+CREATE INDEX product_tag_product_created_at_idx ON ONLY public.product_tag USING btree (product_created_at DESC);
 -- Product download
 CREATE index if not exists product_download_downloaded_at_day_normalized_idx ON public.product_download USING btree (downloaded_at_day_normalized);
 CREATE index if not exists product_download_downloaded_at_idx ON public.product_download USING brin (downloaded_at);

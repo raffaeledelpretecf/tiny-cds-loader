@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -171,7 +171,7 @@ var subcategories = []Subcategory{
 
 func main() {
 	// CLI flags
-	mode := flag.String("mode", "", "Operation mode: 'categories', 'subcategories', 'tags', 'products', 'promos', or 'downloads'")
+	mode := flag.String("mode", "", "Operation mode: 'categories', 'subcategories', 'tags', 'products', 'promos', 'downloads', or 'hugetag'")
 	dbURL := flag.String("db-url", "", "Database connection URL")
 	username := flag.String("username", "", "Database username")
 	password := flag.String("password", "", "Database password")
@@ -182,7 +182,7 @@ func main() {
 
 	// Validate required flags
 	if *mode == "" {
-		log.Fatal("Error: -mode flag is required (categories, subcategories, tags, products, promos, or downloads)")
+		log.Fatal("Error: -mode flag is required (categories, subcategories, tags, products, promos, downloads, or hugetag)")
 	}
 
 	if *dbURL == "" {
@@ -198,14 +198,14 @@ func main() {
 	}
 
 	// Validate mode
-	validModes := map[string]bool{"categories": true, "subcategories": true, "tags": true, "products": true, "promos": true, "downloads": true}
+	validModes := map[string]bool{"categories": true, "subcategories": true, "tags": true, "products": true, "promos": true, "downloads": true, "hugetag": true}
 	if !validModes[*mode] {
-		log.Fatal("Error: mode must be one of: categories, subcategories, tags, products, promos, downloads")
+		log.Fatal("Error: mode must be one of: categories, subcategories, tags, products, promos, downloads, hugetag")
 	}
 
 	// Validate count for modes that require it
-	if (*mode == "subcategories" || *mode == "products" || *mode == "promos" || *mode == "downloads") && *count <= 0 {
-		log.Fatal("Error: -count flag is required and must be > 0 for 'subcategories', 'products', 'promos', and 'downloads' modes")
+	if (*mode == "subcategories" || *mode == "products" || *mode == "promos" || *mode == "downloads" || *mode == "hugetag") && *count <= 0 {
+		log.Fatal("Error: -count flag is required and must be > 0 for 'subcategories', 'products', 'promos', 'downloads', and 'hugetag' modes")
 	}
 
 	// Build connection string
@@ -267,6 +267,11 @@ func main() {
 			log.Fatalf("Failed to import downloads: %v", err)
 		}
 		fmt.Println("\n✓ Downloads import completed successfully!")
+	case "hugetag":
+		if err := importHugeTag(db, *count); err != nil {
+			log.Fatalf("Failed to import huge tag relations: %v", err)
+		}
+		fmt.Println("\n✓ Huge tag relations import completed successfully!")
 	}
 }
 
@@ -385,7 +390,7 @@ func importSubcategories(db *sql.DB, subcategoryCount int) error {
 	for i := 0; i < subcategoryCount; i++ {
 		subcatID := startID + int64(i)
 		parentCatID := parentCategories[rng.Intn(len(parentCategories))]
-		
+
 		// Generate random subcategory name
 		prefix := subcategoryPrefixes[rng.Intn(len(subcategoryPrefixes))]
 		suffix := subcategorySuffixes[rng.Intn(len(subcategorySuffixes))]
@@ -755,10 +760,11 @@ func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []
 	productArgs := make([]interface{}, 0, count*15)
 
 	type productRelation struct {
-		productID      int64
-		categoryID     int64
-		subcategoryIDs []int64
-		tagIDs         []int64
+		productID        int64
+		categoryID       int64
+		subcategoryIDs   []int64
+		tagIDs           []int64
+		productCreatedAt time.Time
 	}
 
 	relations := make([]productRelation, 0, count)
@@ -768,12 +774,14 @@ func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []
 		categoryID := selectCategoryByWeight(rng, categoryWeights)
 		subcategoryIDs := selectSubcategories(rng, categoryID, subcategoryList)
 		tagIDs := selectRandomTags(rng)
+		createdAt := time.Now()
 
 		relations = append(relations, productRelation{
-			productID:      productID,
-			categoryID:     categoryID,
-			subcategoryIDs: subcategoryIDs,
-			tagIDs:         tagIDs,
+			productID:        productID,
+			categoryID:       categoryID,
+			subcategoryIDs:   subcategoryIDs,
+			tagIDs:           tagIDs,
+			productCreatedAt: createdAt,
 		})
 
 		if i > 0 {
@@ -802,7 +810,7 @@ func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []
 			"digital",
 			"published",
 			`{}`, // metadata
-			time.Now(),
+			createdAt,
 			"publish", // status
 		)
 	}
@@ -848,12 +856,12 @@ func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []
 
 	for _, rel := range relations {
 		for _, tagID := range rel.tagIDs {
-			allTagArgs = append(allTagArgs, rel.productID, tagID)
+			allTagArgs = append(allTagArgs, rel.productID, tagID, rel.productCreatedAt)
 		}
 	}
 
-	for i := 0; i < len(allTagArgs); i += tagBatchSize * 2 {
-		end := i + tagBatchSize*2
+	for i := 0; i < len(allTagArgs); i += tagBatchSize * 3 {
+		end := i + tagBatchSize*3
 		if end > len(allTagArgs) {
 			end = len(allTagArgs)
 		}
@@ -864,15 +872,15 @@ func insertProductBatch(db *sql.DB, startID int64, count int, categoryWeights []
 		}
 
 		var tagQuery strings.Builder
-		tagQuery.WriteString("INSERT INTO product_tag (product_id, tag_id) VALUES ")
+		tagQuery.WriteString("INSERT INTO product_tag (product_id, tag_id, product_created_at) VALUES ")
 
 		argPos := 1
-		for j := 0; j < len(batchArgs)/2; j++ {
+		for j := 0; j < len(batchArgs)/3; j++ {
 			if j > 0 {
 				tagQuery.WriteString(", ")
 			}
-			tagQuery.WriteString(fmt.Sprintf("($%d, $%d)", argPos, argPos+1))
-			argPos += 2
+			tagQuery.WriteString(fmt.Sprintf("($%d, $%d, $%d)", argPos, argPos+1, argPos+2))
+			argPos += 3
 		}
 
 		tagQuery.WriteString(" ON CONFLICT DO NOTHING")
@@ -1286,4 +1294,170 @@ func insertDownloadBatch(db *sql.DB, startDownloadID int64, count int, totalProd
 	}
 
 	return tx.Commit()
+}
+
+func importHugeTag(db *sql.DB, relationCount int) error {
+	fmt.Println("\n=== Importing Huge Tag Relations (Tag ID 12345) ===\n")
+
+	// Get total product count and their IDs
+	var totalProducts int64
+	err := db.QueryRow("SELECT COUNT(*) FROM product").Scan(&totalProducts)
+	if err != nil {
+		return fmt.Errorf("failed to count products: %w", err)
+	}
+
+	if totalProducts == 0 {
+		return fmt.Errorf("no products found in database - please import products first")
+	}
+
+	fmt.Printf("Found %d products in database\n", totalProducts)
+	fmt.Printf("Creating %d relations for tag_id=12345...\n", relationCount)
+
+	// Get min and max product IDs for random selection
+	var minProductID, maxProductID int64
+	err = db.QueryRow("SELECT MIN(product_id), MAX(product_id) FROM product").Scan(&minProductID, &maxProductID)
+	if err != nil {
+		return fmt.Errorf("failed to get product ID range: %w", err)
+	}
+
+	fmt.Printf("Product ID range: %d to %d\n", minProductID, maxProductID)
+
+	bar := progressbar.NewOptions(relationCount,
+		progressbar.OptionSetDescription("Tag Relations"),
+		progressbar.OptionSetWidth(40),
+		progressbar.OptionShowCount(),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "=",
+			SaucerHead:    ">",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+	)
+
+	// Create work channel
+	type relationBatch struct {
+		count int
+	}
+
+	jobs := make(chan relationBatch, 100)
+	errors := make(chan error, 1000)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	totalInserted := 0
+	var firstError error
+
+	// Error collector goroutine
+	var errorWg sync.WaitGroup
+	errorWg.Add(1)
+	go func() {
+		defer errorWg.Done()
+		for err := range errors {
+			if err != nil && firstError == nil {
+				mu.Lock()
+				if firstError == nil {
+					firstError = err
+				}
+				mu.Unlock()
+			}
+		}
+	}()
+
+	// Start worker goroutines
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+
+			rng := rand.New(rand.NewSource(time.Now().UnixNano() + int64(workerID)*1000))
+
+			for batch := range jobs {
+				inserted, err := insertHugeTagBatch(db, batch.count, minProductID, maxProductID, rng)
+				if err != nil {
+					errors <- fmt.Errorf("worker %d: %w", workerID, err)
+					continue
+				}
+
+				mu.Lock()
+				totalInserted += inserted
+				bar.Add(inserted)
+				mu.Unlock()
+			}
+		}(w)
+	}
+
+	// Send jobs to workers
+	go func() {
+		remaining := relationCount
+		const batchSize = 20000 // Relations per batch (increased for better performance)
+
+		for remaining > 0 {
+			count := batchSize
+			if remaining < batchSize {
+				count = remaining
+			}
+
+			jobs <- relationBatch{count: count}
+			remaining -= count
+		}
+		close(jobs)
+	}()
+
+	// Wait for all workers to finish
+	wg.Wait()
+	close(errors)
+
+	// Wait for error collector to finish
+	errorWg.Wait()
+
+	// Check if there was an error
+	if firstError != nil {
+		return firstError
+	}
+
+	fmt.Printf("\n  ✓ Inserted: %d tag relations\n\n", totalInserted)
+	return nil
+}
+
+func insertHugeTagBatch(db *sql.DB, count int, minProductID, maxProductID int64, rng *rand.Rand) (int, error) {
+	const tagID int64 = 12345 // Always use tag_id = 12345
+
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Generate random product IDs
+	productIDs := make([]int64, count)
+	productRange := maxProductID - minProductID + 1
+
+	for i := 0; i < count; i++ {
+		// Generate random product ID within the range
+		productIDs[i] = minProductID + rng.Int63n(productRange)
+	}
+
+	// Use UNNEST with JOIN for much better performance
+	// This approach joins the unnested array with the product table efficiently
+	query := `
+		INSERT INTO product_tag (product_id, tag_id, product_created_at)
+		SELECT DISTINCT u.product_id, $2::bigint, p.created_at
+		FROM unnest($1::bigint[]) AS u(product_id)
+		INNER JOIN product p ON p.product_id = u.product_id
+		ON CONFLICT DO NOTHING
+	`
+
+	// Execute the insert using pq.Array for the array parameter
+	result, err := tx.Exec(query, pq.Array(productIDs), tagID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert tag relations: %w", err)
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return int(rowsAffected), nil
 }
