@@ -283,4 +283,5 @@ WHERE NOT (EXISTS (SELECT 1
                    FROM product_promo pp
                    WHERE pp.product_id = p.product_id));
 CREATE INDEX mv_product_downloads_last_7d_cat_dl_idx ON public.mv_product_downloads_last_7d USING btree (category_id, download_count DESC);
+CREATE INDEX mv_product_downloads_last_7d_product_id_idx ON public.mv_product_downloads_last_7d USING btree (product_id);
 
