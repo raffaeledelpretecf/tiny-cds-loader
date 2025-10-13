@@ -1,8 +1,8 @@
-CREATE
-EXTENSION IF NOT EXISTS ltree;
-create schema partman;
-CREATE
-EXTENSION pg_partman SCHEMA partman;
+create schema if not exists partman;
+create schema if not exists public;
+
+CREATE EXTENSION IF NOT EXISTS ltree;
+CREATE EXTENSION IF NOT EXISTS pg_partman SCHEMA partman;
 
 -- public.product_tag definition
 
@@ -15,7 +15,23 @@ CREATE TABLE product_tag
     product_id int8 NOT NULL,
     tag_id     int8 NOT NULL,
     CONSTRAINT product_tag_pk PRIMARY KEY (product_id, tag_id)
-);
+) PARTITION BY HASH (tag_id);
+
+DO
+$$
+DECLARE
+i INT;
+    num_partitions
+INT := 64; -- total number of partitions
+BEGIN
+FOR i IN 0..(num_partitions - 1) LOOP
+        EXECUTE format(
+            'CREATE TABLE product_tag_p%s PARTITION OF product_tag FOR VALUES WITH (MODULUS %s, REMAINDER %s);',
+            i, num_partitions, i
+        );
+END LOOP;
+END $$;
+
 
 -- public.tag definition
 
@@ -250,68 +266,3 @@ CREATE INDEX if not exists product_tag_tag_id_idx ON public.product_tag USING bt
 CREATE index if not exists product_download_downloaded_at_day_normalized_idx ON public.product_download USING btree (downloaded_at_day_normalized);
 CREATE index if not exists product_download_downloaded_at_idx ON public.product_download USING brin (downloaded_at);
 CREATE index if not exists product_download_product_idt_idx ON public.product_download USING btree (product_id);
-
--- public.mv_product_downloads_last_7d source
-
-CREATE
-MATERIALIZED VIEW mv_product_downloads_last_7d
-AS
-SELECT p.category_id, p.product_id, COALESCE(rd.download_count, 0::bigint) AS download_count
-FROM product p
-         LEFT JOIN (SELECT pd.product_id,
-                           count(*) AS download_count
-                    FROM product_download pd
-                    WHERE pd.downloaded_at_day_normalized >=
-                          (floor(EXTRACT(epoch FROM now()) / 86400::numeric)::bigint - 7)
-                    GROUP BY pd.product_id) rd ON p.product_id = rd.product_id
-WHERE NOT (EXISTS (SELECT 1
-                   FROM product_promo pp
-                   WHERE pp.product_id = p.product_id))
-ORDER BY download_count DESC;
-CREATE INDEX mv_product_downloads_last_7d_cat_dl_idx ON public.mv_product_downloads_last_7d USING btree (category_id, download_count DESC);
-CREATE INDEX mv_product_downloads_last_7d_download_count_idx ON public.mv_product_downloads_last_7d USING btree (download_count DESC);
-CREATE INDEX mv_product_downloads_last_7d_product_id_download_count_desc_idx ON public.mv_product_downloads_last_7d USING btree (product_id, download_count DESC);
-CREATE UNIQUE INDEX mv_product_downloads_last_7d_product_id_idx ON public.mv_product_downloads_last_7d USING btree (product_id);
-
--- public.mv_category_counts source
-
-CREATE
-MATERIALIZED VIEW mv_category_counts
-TABLESPACE pg_default
-AS
-SELECT category_id,
-       count(*) AS count
-FROM product p
-WHERE status::text = 'publish'::text
-  AND NOT (EXISTS ( SELECT 1
-    FROM product_promo pp
-    WHERE pp.product_id = p.product_id))
-GROUP BY category_id
-ORDER BY (count (*)) DESC
-WITH DATA;
-
--- View indexes:
-CREATE INDEX mv_category_counts_category_id_idx ON public.mv_category_counts USING btree (category_id);
-
-
--- public.mv_subcategory_counts source
-
-CREATE
-MATERIALIZED VIEW mv_subcategory_counts
-TABLESPACE pg_default
-AS
-SELECT ppc.category_id,
-       count(*) AS count
-FROM product_product_category ppc
-    LEFT JOIN product p
-ON p.product_id = ppc.product_id
-WHERE p.status::text = 'publish'::text
-  AND NOT (EXISTS ( SELECT 1
-    FROM product_promo pp
-    WHERE pp.product_id = ppc.product_id))
-GROUP BY ppc.category_id
-ORDER BY (count (*)) DESC
-WITH DATA;
-
--- View indexes:
-CREATE INDEX mv_subcategory_counts_category_id_idx ON public.mv_subcategory_counts USING btree (category_id);
