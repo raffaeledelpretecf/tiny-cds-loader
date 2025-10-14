@@ -204,11 +204,33 @@ SELECT partman.create_parent(
                p_template_table := 'partman.product_template'::text
        );
 
-CREATE TABLE public.product_graphics PARTITION OF public.product
+CREATE TABLE public.product_graphics
+    PARTITION OF public.product
     FOR VALUES IN
 (
     553
+)
+    PARTITION BY HASH
+(
+    product_id
 );
+
+DO
+$$
+DECLARE
+i int;
+BEGIN
+FOR i IN 0..31 LOOP
+        EXECUTE format(
+            'CREATE TABLE IF NOT EXISTS public.product_graphics_p%s
+             PARTITION OF public.product_graphics
+             FOR VALUES WITH (MODULUS 32, REMAINDER %s);',
+            i, i
+        );
+END LOOP;
+END $$;
+
+
 CREATE TABLE public.product_fonts PARTITION OF public.product
     FOR VALUES IN
 (
@@ -252,13 +274,22 @@ CREATE TABLE public.product_knitting PARTITION OF public.product
 
 -- Create the heavies indexed after the inserts
 -- Product
-CREATE index if not exists product_author_id_idx ON public.product USING btree (author_id);
-CREATE index if not exists product_category_id_idx ON public.product USING btree (category_id);
-CREATE INDEX if not exists product_category_id_status_created_at_desc_idx ON public.product USING btree (category_id, status, created_at DESC);
-CREATE INDEX if not exists product_category_id_status_desc_idx ON public.product USING btree (category_id, status DESC);
-CREATE INDEX if not exists product_status_created_at_desc_idx ON public.product USING btree (status, created_at DESC);
-CREATE INDEX if not exists product_status_idx ON public.product USING btree (status);
-CREATE INDEX if not exists product_prodct_id_status_idx ON public.product USING btree (product_id, status);
+CREATE INDEX IF NOT EXISTS product_category_id_created_at_desc_idx
+    ON ONLY public.product USING btree (category_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS product_created_at_idx
+    ON ONLY public.product USING btree (created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS product_pk
+    ON ONLY public.product USING btree (product_id, category_id);
+
+CREATE INDEX IF NOT EXISTS product_status_idx
+    ON ONLY public.product USING btree (status);
+
+CREATE INDEX IF NOT EXISTS product_status_not_published_idx
+    ON ONLY public.product USING btree (status)
+    WHERE (status::text <> 'publish'::text);
+
 -- Product category
 CREATE INDEX if not exists product_product_category_category_id_idx ON public.product_product_category USING btree (category_id);
 CREATE INDEX if not exists product_product_category_product_id_idx ON public.product_product_category USING btree (product_id);
@@ -266,28 +297,12 @@ CREATE INDEX if not exists product_product_category_category_id_product_id_idx O
 -- Product tag
 CREATE INDEX if not exists product_tag_product_id_idx ON public.product_tag USING btree (product_id);
 CREATE INDEX if not exists product_tag_tag_id_idx ON public.product_tag USING btree (tag_id);
-CREATE INDEX product_tag_product_created_at_idx ON ONLY public.product_tag USING btree (product_created_at DESC);
+CREATE INDEX product_tag_tag_id_created_at_desc_product_id_idx ON ONLY public.product_tag USING btree (tag_id, product_created_at DESC, product_id);
 -- Product download
 CREATE index if not exists product_download_downloaded_at_day_normalized_idx ON public.product_download USING btree (downloaded_at_day_normalized);
 CREATE index if not exists product_download_downloaded_at_idx ON public.product_download USING brin (downloaded_at);
 CREATE index if not exists product_download_product_idt_idx ON public.product_download USING btree (product_id);
 CREATE index if not exists product_status_not_publish_idx ON ONLY public.product USING btree (status) WHERE ((status)::text <> 'publish'::text);
-CREATE
-MATERIALIZED VIEW mv_product_downloads_last_7d AS
-SELECT p.category_id, p.product_id, COALESCE(rd.download_count, 0::bigint) AS download_count
-FROM product p
-         LEFT JOIN (SELECT pd.product_id,
-                           count(*) AS download_count
-                    FROM product_download pd
-                    WHERE pd.downloaded_at_day_normalized >=
-                          (floor(EXTRACT(epoch FROM now()) / 86400::numeric)::bigint - 7)
-                    GROUP BY pd.product_id) rd ON p.product_id = rd.product_id
-WHERE NOT (EXISTS (SELECT 1
-                   FROM product_promo pp
-                   WHERE pp.product_id = p.product_id));
-CREATE INDEX mv_product_downloads_last_7d_download_count_idx ON public.mv_product_downloads_last_7d USING btree (download_count DESC);
-CREATE INDEX mv_product_downloads_last_7d_product_id_download_count_desc_idx ON public.mv_product_downloads_last_7d USING btree (product_id, download_count DESC);
-CREATE INDEX mv_product_downloads_last_7d_product_id_idx ON public.mv_product_downloads_last_7d USING btree (product_id);
 
 -- public.mv_product_category_count source
 
@@ -318,6 +333,50 @@ ORDER BY category_id WITH DATA;
 
 -- View indexes:
 CREATE INDEX mv_product_category_count_category_id_idx ON public.mv_product_category_count USING btree (category_id);
+
+
+-- public.mv_product_downloads_last_7d source
+
+CREATE
+MATERIALIZED VIEW mv_product_downloads_last_7d
+TABLESPACE pg_default
+AS
+SELECT p.category_id,
+       p.product_id,
+       COALESCE(rd.download_count, 0::bigint) AS download_count
+FROM product p
+         LEFT JOIN (SELECT pd.product_id,
+                           count(*) AS download_count
+                    FROM product_download pd
+                    WHERE pd.downloaded_at_day_normalized >=
+                          (floor(EXTRACT(epoch FROM now()) / 86400::numeric)::bigint - 7)
+                    GROUP BY pd.product_id) rd ON p.product_id = rd.product_id
+WHERE NOT (EXISTS (SELECT 1
+                   FROM product_promo pp
+                   WHERE pp.product_id = p.product_id)) WITH DATA;
+
+-- View indexes:
+CREATE INDEX mv_product_downloads_last_7d_download_count_idx ON public.mv_product_downloads_last_7d USING btree (download_count DESC);
+CREATE INDEX mv_product_downloads_last_7d_product_id_download_count_desc_idx ON public.mv_product_downloads_last_7d USING btree (product_id, download_count DESC);
+CREATE INDEX mv_product_downloads_last_7d_product_id_idx ON public.mv_product_downloads_last_7d USING btree (product_id);
+
+
+-- public.mv_product_not_available source
+
+CREATE
+MATERIALIZED VIEW mv_product_not_available
+TABLESPACE pg_default
+AS
+SELECT product_id
+FROM product p
+WHERE status::text <> 'publish'::text OR (EXISTS ( SELECT 1
+           FROM product_promo pp
+          WHERE pp.product_id = p.product_id))
+ORDER BY product_id
+WITH DATA;
+
+-- View indexes:
+CREATE INDEX mv_product_not_available_product_id_idx ON public.mv_product_not_available USING btree (product_id);
 
 
 -- public.mv_product_tag_count source
