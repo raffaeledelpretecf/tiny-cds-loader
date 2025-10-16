@@ -16,7 +16,6 @@ CREATE TABLE product_tag
 (
     product_id         int8 NOT NULL,
     tag_id             int8 NOT NULL,
-    product_created_at timestamptz NULL,
     CONSTRAINT product_tag_pk PRIMARY KEY (product_id, tag_id)
 ) PARTITION BY HASH (tag_id);
 
@@ -274,14 +273,14 @@ CREATE TABLE public.product_knitting PARTITION OF public.product
 
 -- Create the heavies indexed after the inserts
 -- Product
-CREATE INDEX IF NOT EXISTS product_created_at_desc_idx
-    ON public.product USING btree (created_at DESC);
+CREATE INDEX product_product_id_idx
+    ON public.product (product_id);
 
-CREATE INDEX IF NOT EXISTS product_category_id_created_at_desc_idx
-    ON public.product USING btree (category_id, created_at DESC);
+CREATE INDEX product_product_id_desc_idx
+    ON public.product USING btree (product_id DESC)
 
-CREATE INDEX product_product_id_created_at_desc_idx
-    ON ONLY public.product USING btree (product_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS product_category_id_idx
+    ON public.product USING btree (category_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS product_pk
     ON public.product USING btree (product_id, category_id);
@@ -298,14 +297,30 @@ CREATE INDEX if not exists product_product_category_category_id_idx ON public.pr
 CREATE INDEX if not exists product_product_category_product_id_idx ON public.product_product_category USING btree (product_id);
 CREATE INDEX if not exists product_product_category_category_id_product_id_idx ON public.product_product_category USING btree (category_id, product_id);
 -- Product tag
-CREATE INDEX product_tag_product_id_idx ON ONLY public.product_tag USING btree (product_id DESC);
-CREATE INDEX product_tag_tag_id__product_id_desc_idx ON ONLY public.product_tag USING btree (tag_id DESC, product_id DESC);
-CREATE INDEX product_tag_tag_id_idx ON ONLY public.product_tag USING btree (tag_id DESC);
+CREATE INDEX product_tag_product_id_idx ON public.product_tag USING btree (product_id DESC);
+CREATE INDEX product_tag_tag_id_idx ON public.product_tag USING btree (tag_id);
+CREATE INDEX product_tag_tag_id_product_id_desc_idx ON public.product_tag USING btree (tag_id, product_id DESC);
 -- Product download
 CREATE index if not exists product_download_downloaded_at_day_normalized_idx ON public.product_download USING btree (downloaded_at_day_normalized);
 CREATE index if not exists product_download_downloaded_at_idx ON public.product_download USING brin (downloaded_at);
 CREATE index if not exists product_download_product_idt_idx ON public.product_download USING btree (product_id);
-CREATE index if not exists product_status_not_publish_idx ON public.product USING btree (status) WHERE ((status)::text <> 'publish'::text);
+
+-- public.mv_product_not_available source
+
+CREATE
+MATERIALIZED VIEW mv_product_not_available
+TABLESPACE pg_default
+AS
+SELECT product_id
+FROM product p
+WHERE status::text <> 'publish'::text OR (EXISTS ( SELECT 1
+           FROM product_promo pp
+          WHERE pp.product_id = p.product_id))
+ORDER BY product_id
+WITH DATA;
+
+-- View indexes:
+CREATE INDEX mv_product_not_available_product_id_idx ON public.mv_product_not_available USING btree (product_id);
 
 -- public.mv_product_category_count source
 
@@ -318,19 +333,18 @@ SELECT category_id,
 FROM (SELECT p.category_id,
              count(*) AS product_count
       FROM product p
-      WHERE p.status::text = 'publish'::text AND NOT (EXISTS ( SELECT 1
-                   FROM product_promo pp
-                  WHERE pp.product_id = p.product_id))
+      WHERE NOT (EXISTS ( SELECT 1
+                          FROM mv_product_not_available na
+                          WHERE na.product_id = p.product_id))
       GROUP BY p.category_id
       UNION ALL
       SELECT ppc.category_id, count (*) AS product_count
       FROM product_product_category ppc
-          LEFT JOIN product p
-      ON ppc.product_id = p.product_id
-      WHERE p.status::text = 'publish'::text
-        AND NOT (EXISTS ( SELECT 1
-          FROM product_promo pp
-          WHERE pp.product_id = p.product_id))
+               LEFT JOIN product p
+                         ON ppc.product_id = p.product_id
+      WHERE NOT (EXISTS ( SELECT 1
+                          FROM mv_product_not_available na
+                          WHERE na.product_id = p.product_id))
       GROUP BY ppc.category_id) unnamed_subquery
 ORDER BY category_id WITH DATA;
 
@@ -356,32 +370,15 @@ FROM product p
                     GROUP BY pd.product_id) rd ON p.product_id = rd.product_id
 WHERE NOT (EXISTS (SELECT 1
                    FROM product_promo pp
-                   WHERE pp.product_id = p.product_id)) WITH DATA;
+                   WHERE pp.product_id = p.product_id))
+                   order by product_id desc
+                   WITH DATA;
 
 -- View indexes:
 CREATE INDEX mv_product_downloads_last_7d_download_count_idx ON public.mv_product_downloads_last_7d USING btree (download_count DESC);
 CREATE INDEX mv_product_downloads_last_7d_product_id_download_count_desc_idx ON public.mv_product_downloads_last_7d USING btree (product_id, download_count DESC);
 CREATE INDEX mv_product_downloads_last_7d_product_id_idx ON public.mv_product_downloads_last_7d USING btree (product_id);
 CREATE INDEX mv_product_downloads_last_7d_category_id_idx ON public.mv_product_downloads_last_7d (category_id);
-
-
--- public.mv_product_not_available source
-
-CREATE
-MATERIALIZED VIEW mv_product_not_available
-TABLESPACE pg_default
-AS
-SELECT product_id
-FROM product p
-WHERE status::text <> 'publish'::text OR (EXISTS ( SELECT 1
-           FROM product_promo pp
-          WHERE pp.product_id = p.product_id))
-ORDER BY product_id
-WITH DATA;
-
--- View indexes:
-CREATE INDEX mv_product_not_available_product_id_idx ON public.mv_product_not_available USING btree (product_id);
-
 
 -- public.mv_product_tag_count source
 
@@ -405,21 +402,12 @@ CREATE
 MATERIALIZED VIEW mv_product_tag_count_not_available
 TABLESPACE pg_default
 AS
-SELECT t.tag_id,
-       COALESCE(count(DISTINCT combined.product_id), 0::bigint) AS product_count
-FROM tag t
-         LEFT JOIN (SELECT t_1.tag_id,
-                           pp.product_id
-                    FROM product_promo pp
-                             JOIN product_tag t_1 ON pp.product_id = t_1.product_id
-                    UNION ALL
-                    SELECT t_1.tag_id,
-                           p.product_id
-                    FROM product p
-                             JOIN product_tag t_1 ON p.product_id = t_1.product_id
-                    WHERE p.status::text <> 'publish'::text) combined ON t.tag_id = combined.tag_id
-GROUP BY t.tag_id
-ORDER BY t.tag_id WITH DATA;
+select t.tag_id, count(*) from tag t
+                                   left join product_tag pt on t.tag_id = pt.tag_id
+where not exists (
+    select 1 from mv_product_not_available na where na.product_id = pt.product_id
+)
+group by t.tag_id WITH DATA;
 
 -- View indexes:
 CREATE INDEX mv_product_tag_count_not_available_tag_id_idx ON public.mv_product_tag_count_not_available USING btree (tag_id);
