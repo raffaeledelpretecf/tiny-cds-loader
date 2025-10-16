@@ -32,7 +32,7 @@ type Subcategory struct {
 const (
 	totalTags         = 12000000 // 12 million tags as per specs
 	batchSize         = 10000    // Insert tags in batches (limited by PostgreSQL's 65535 parameter limit)
-	numWorkers        = 20       // Number of parallel workers (increased for better throughput)
+	numWorkers        = 40       // Number of parallel workers (increased for better throughput)
 	productBatchSize  = 4000     // Products per batch (4000 * 15 params = 60,000 < 65,535 limit)
 	avgTagsPerProduct = 25       // Average tags per product
 )

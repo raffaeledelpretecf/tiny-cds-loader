@@ -274,20 +274,23 @@ CREATE TABLE public.product_knitting PARTITION OF public.product
 
 -- Create the heavies indexed after the inserts
 -- Product
-CREATE INDEX IF NOT EXISTS product_category_id_created_at_desc_idx
-    ON ONLY public.product USING btree (category_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS product_created_at_desc_idx
+    ON public.product USING btree (created_at DESC);
 
-CREATE INDEX IF NOT EXISTS product_created_at_idx
-    ON ONLY public.product USING btree (created_at DESC);
+CREATE INDEX IF NOT EXISTS product_category_id_created_at_desc_idx
+    ON public.product USING btree (category_id, created_at DESC);
+
+CREATE INDEX product_product_id_created_at_desc_idx
+    ON ONLY public.product USING btree (product_id, created_at DESC);
 
 CREATE UNIQUE INDEX IF NOT EXISTS product_pk
-    ON ONLY public.product USING btree (product_id, category_id);
+    ON public.product USING btree (product_id, category_id);
 
 CREATE INDEX IF NOT EXISTS product_status_idx
-    ON ONLY public.product USING btree (status);
+    ON public.product USING btree (status);
 
 CREATE INDEX IF NOT EXISTS product_status_not_published_idx
-    ON ONLY public.product USING btree (status)
+    ON public.product USING btree (status)
     WHERE (status::text <> 'publish'::text);
 
 -- Product category
@@ -295,14 +298,14 @@ CREATE INDEX if not exists product_product_category_category_id_idx ON public.pr
 CREATE INDEX if not exists product_product_category_product_id_idx ON public.product_product_category USING btree (product_id);
 CREATE INDEX if not exists product_product_category_category_id_product_id_idx ON public.product_product_category USING btree (category_id, product_id);
 -- Product tag
-CREATE INDEX if not exists product_tag_product_id_idx ON public.product_tag USING btree (product_id);
-CREATE INDEX if not exists product_tag_tag_id_idx ON public.product_tag USING btree (tag_id);
-CREATE INDEX product_tag_tag_id_created_at_desc_product_id_idx ON ONLY public.product_tag USING btree (tag_id, product_created_at DESC, product_id);
+CREATE INDEX product_tag_product_id_idx ON ONLY public.product_tag USING btree (product_id DESC);
+CREATE INDEX product_tag_tag_id__product_id_desc_idx ON ONLY public.product_tag USING btree (tag_id DESC, product_id DESC);
+CREATE INDEX product_tag_tag_id_idx ON ONLY public.product_tag USING btree (tag_id DESC);
 -- Product download
 CREATE index if not exists product_download_downloaded_at_day_normalized_idx ON public.product_download USING btree (downloaded_at_day_normalized);
 CREATE index if not exists product_download_downloaded_at_idx ON public.product_download USING brin (downloaded_at);
 CREATE index if not exists product_download_product_idt_idx ON public.product_download USING btree (product_id);
-CREATE index if not exists product_status_not_publish_idx ON ONLY public.product USING btree (status) WHERE ((status)::text <> 'publish'::text);
+CREATE index if not exists product_status_not_publish_idx ON public.product USING btree (status) WHERE ((status)::text <> 'publish'::text);
 
 -- public.mv_product_category_count source
 
@@ -359,6 +362,7 @@ WHERE NOT (EXISTS (SELECT 1
 CREATE INDEX mv_product_downloads_last_7d_download_count_idx ON public.mv_product_downloads_last_7d USING btree (download_count DESC);
 CREATE INDEX mv_product_downloads_last_7d_product_id_download_count_desc_idx ON public.mv_product_downloads_last_7d USING btree (product_id, download_count DESC);
 CREATE INDEX mv_product_downloads_last_7d_product_id_idx ON public.mv_product_downloads_last_7d USING btree (product_id);
+CREATE INDEX mv_product_downloads_last_7d_category_id_idx ON public.mv_product_downloads_last_7d (category_id);
 
 
 -- public.mv_product_not_available source
